@@ -81,10 +81,28 @@ router.get('/', chekauth, async (req, res) => {
                                     return { ...element["dataValues"], username, userimage }
                                 })
                             )
-                            return res.status(200).json({data1,data2})
+
+                            const datas = [...data1, ...data2]
+                            let uniqueArray = [...new Set(datas)]
+
+                            for (let i = 0; i < uniqueArray.length; i++) {
+                                if (uniqueArray[i].user1_uid === uniqueArray[i].user2_uid) {
+                                    delete uniqueArray[i]
+                                    break
+                                }
+                            }
+
+
+                            let newarray = []
+                            for (const element of uniqueArray) {
+                                if (typeof element == "object") {
+                                    newarray.push(element)
+                                }
+                            }
+                            return res.status(200).json(newarray)
                         }
                     }
-                        return res.status(200).json({data1})
+                    return res.status(200).json({ data1 })
                 }
             }
 
@@ -96,7 +114,6 @@ router.get('/', chekauth, async (req, res) => {
         res.status(500).json({ message: 'error, try again' })
     }
 })
-
 
 router.post('/:username', chekauth, async (req, res) => {
     try {
@@ -153,4 +170,3 @@ router.post('/:username', chekauth, async (req, res) => {
 
 
 export default router
-
