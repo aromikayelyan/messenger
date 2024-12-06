@@ -1,12 +1,34 @@
 import { Router } from "express"
-import Chat from "../models/chat_model.js"
-import Room from "../models/room_model.js"
 import { v4 as uuidv4 } from "uuid"
 import { chekauth } from "../middleware/middlewares.js"
-import { Op, where } from 'sequelize';
+import { Op, where } from 'sequelize'
+import multer from 'multer'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+import path from "path"
+import fs from 'fs'
+import Chat from "../models/chat_model.js"
+import Room from "../models/room_model.js"
 import User from "../models/user_model.js"
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename)
+
 const router = Router()
 
+
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/')
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = `${uuidv4()}${path.extname(file.originalname)}`
+        cb(null, uniqueSuffix)
+    }
+});
+const upload = multer({ storage: storage })
 
 
 router.get('/:username', chekauth, async (req, res) => {
@@ -28,7 +50,21 @@ router.get('/:username', chekauth, async (req, res) => {
 
         if (exisRoom) {
             const chat = await Chat.findAll({ where: { roomuid: exisRoom.uid } })
-            return res.status(200).json(chat)
+
+            for (let i = 0; i < chat.length; i++) {
+                if (!chat[i].images) {
+                    continue
+                } else {
+                    if (chat[i].images[0] == '[') {
+                        const imagename = JSON.parse(chat[i].images)
+                        for (let j = 0; j < imagename.length; j++) {
+                            const pathfile = path.join(__dirname, '..', 'uploads', imagename[j])
+                            res.sendFile(pathfile)
+                        }
+                    }
+                }
+            }
+            // return res.status(200).json(chat)
         } else {
             return res.status(200).json({ message: "room is not defined" })
         }
@@ -115,7 +151,8 @@ router.get('/', chekauth, async (req, res) => {
     }
 })
 
-router.post('/:username', chekauth, async (req, res) => {
+
+router.post('/:username', chekauth, upload.array('images', 10), async (req, res) => {
     try {
         const candidate = await User.findOne({ where: { username: req.params.username } })
         if (!candidate) {
@@ -130,18 +167,33 @@ router.post('/:username', chekauth, async (req, res) => {
                 ],
             },
         });
+        const thedata = req.body.body
+        const body = JSON.parse(thedata)
 
         if (exisRoom) {
-            const roomuid = exisRoom.uid
-            const chat = await Chat.create({
+            if (!req.files || req.files.length === 0) {
+                const roomuid = exisRoom.uid
+                const chat = await Chat.create({
+                    senderuid: req.session.user.uid,
+                    message: body.message,
+                    roomuid
+                })
+                return res.status(200).json(chat)
+            } else {
+                const imagesArray = req.files.map(file => file.filename)
+                const images = JSON.stringify(imagesArray)
 
-                senderuid: req.session.user.uid,
-                message: req.body.message,
-                images: 'someimages',
-                roomuid
-            })
-            return res.status(200).json(chat)
+                const roomuid = exisRoom.uid
+                const chat = await Chat.create({
+                    senderuid: req.session.user.uid,
+                    message: body.message,
+                    images,
+                    roomuid
+                })
 
+
+                return res.status(200).json(chat)
+            }
         } else {
             const new_room = await Room.create({
                 uid: uuidv4(),
@@ -153,8 +205,7 @@ router.post('/:username', chekauth, async (req, res) => {
             const chat = await Chat.create({
 
                 senderuid: req.session.user.uid,
-                message: req.body.message,
-                images: 'someimages',
+                message: body.message,
                 roomuid: room_uid
             })
             return res.status(200).json(chat)

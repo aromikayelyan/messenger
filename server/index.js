@@ -2,6 +2,7 @@ import express, { urlencoded } from 'express'
 import { variable } from './middleware/middlewares.js'
 import sequelize from "./utils/connect.js"
 import session from 'express-session'
+import multer from 'multer'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import registerValidation from './validation/validator.js'
@@ -13,6 +14,18 @@ import room from './routes/roomroute.js'
 import auth from './routes/auth.js'
 
 dotenv.config()
+
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/'); // Папка для сохранения файлов
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = `${uuidv4()}${path.extname(file.originalname)}`
+      cb(null, uniqueSuffix);
+    }
+  });
+const upload = multer({ storage: storage})
 
 const PORT = process.env.PORT || 4601
 const secret = process.env.SESSION_SECRET || 'secret'
