@@ -3,6 +3,7 @@ import usermodel from "../models/user_model.js"
 import { Router } from "express"
 import { v4 as uuidv4 } from "uuid"
 import { validationResult } from "express-validator"
+import { where } from "sequelize"
 
 const router = Router()
 
@@ -54,16 +55,36 @@ router.post('/login', async (req, res) => {
                 })
                 // res.redirect('/chats')
                 res.status(200).json({message:"autorized"})
-
             } else {
                 if (err) {
                     throw err
                 }
             }
         } else {
-            res.redirect('/log')
+                res.status(200).json({message:"user not found"})
+                
         }
 
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({message:'error, try again'})
+    }
+})
+
+router.put('/account', async (req, res) => {
+    try {
+        const {username} = req.body
+        const User = await usermodel.findOne({where:{uid:req.session.user.uid}})
+        const isFree = await usermodel.findOne({where:{username}})
+        
+        if(isFree && isFree.username === username){
+            return res.status(405).json({ message: 'Имя занято попробуйте другой' })
+        }else{
+            User.username = username
+            await User.save()
+    
+            return res.status(200).json({ message: 'Изменено' })
+        }
     } catch (error) {
         console.log(error)
         res.status(500).json({message:'error, try again'})

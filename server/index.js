@@ -8,8 +8,6 @@ import dotenv from 'dotenv'
 import registerValidation from './validation/validator.js'
 import User from './models/user_model.js'
 import Room from './models/room_model.js'
-import Chat from './models/chat_model.js'
-import chat from './routes/chatroute.js'
 import room from './routes/roomroute.js'
 import auth from './routes/auth.js'
 
@@ -27,7 +25,7 @@ const storage = multer.diskStorage({
   });
 const upload = multer({ storage: storage})
 
-const PORT = process.env.PORT || 4601
+const PORT =process.env.PORT || 4601
 const secret = process.env.SESSION_SECRET || 'secret'
 
 const app = express()
@@ -50,7 +48,6 @@ app.use(variable)
 
 
 
-app.use('/chat', chat)
 app.use('/room', room)
 app.use('/auth',registerValidation, auth)
 
@@ -59,7 +56,7 @@ app.use('/auth',registerValidation, auth)
 async function start(){
     try {
         await sequelize.sync()
-        app.listen(PORT, ()=>{
+        app.listen(PORT,()=>{
             console.log(`server run on port ${PORT}`)
         })
     } catch (e) {
